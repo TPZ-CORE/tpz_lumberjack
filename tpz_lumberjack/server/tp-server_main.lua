@@ -106,7 +106,7 @@ AddEventHandler("tpz_lumberjack:onChoppingSuccessReward", function(treeLocation)
 		local rquantity  = math.random(reward.quantity[1], reward.quantity[2])
 
 		if Config.tpz_leveling then
-			TriggerEvent("tp_leveling:AddLevelExperience", _source, "lumberjack", tonumber(reward.exp))
+			TriggerEvent("tpz_leveling:AddLevelExperience", _source, "lumberjack", tonumber(reward.exp))
 		end
 	
 		local canCarryItem = TPZInv.canCarryItem(_source, reward.name, rquantity)
