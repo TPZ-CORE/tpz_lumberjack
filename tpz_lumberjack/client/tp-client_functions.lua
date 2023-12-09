@@ -183,6 +183,8 @@ function OnHatchetEquip(toolhash)
 
     local ped = PlayerPedId()
 
+    SetCurrentPedWeapon(ped, GetHashKey("WEAPON_UNARMED"), true, 0, false, false)
+
     ClientData.HatchetTool = CreateObject(toolhash, GetOffsetFromEntityInWorldCoords(ped,0.0,0.0,0.0), true, true, true)
     AttachEntityToEntity(ClientData.HatchetTool, ped, GetPedBoneIndex(ped, 7966), 0.0,0.0,0.0,  0.0,0.0,0.0, 0, 0, 0, 0, 2, 1, 0, 0);
     Citizen.InvokeNative(0x923583741DC87BCE, ped, 'arthur_healthy')
