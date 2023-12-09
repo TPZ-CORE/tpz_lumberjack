@@ -31,7 +31,7 @@ Config.HatchetItem                  = "hatchet"
 Config.DurabilityRemove             = {0, 1} -- Set to false if you don't want to remove any durability. (100% is maximum)
 
 Config.ChoppingTimer                = 10 -- Time in seconds.
-Config.ChopAgain                    = 3 -- Time in minutes (Time before you can chop again in the same tree location). Set to false if you don't want them to chop again until the next restart.
+Config.ChopAgain                    = 60 -- Time in minutes (Time before you can chop again in the same tree location). Set to false if you don't want them to chop again until the next restart.
 
 Config.ActionDistance               = 1.1
 
