@@ -8,3 +8,5 @@ description 'TPZ-CORE Lumberjack'
 shared_scripts { 'config.lua', 'config_trees.lua', 'locales.lua' }
 server_scripts { 'server/*.lua' }
 client_scripts { 'client/*.lua' }
+
+lua54 'yes'
