@@ -28,7 +28,7 @@ function ConvertTreesToHash()
     local model_hashes = {}
 
     for _, model_name in pairs(Trees.List) do
-        local model_hash = GetHashKey(model_name)
+        local model_hash = joaat(model_name)
         model_hashes[model_hash] = model_name
     end
 
@@ -39,7 +39,7 @@ function ConvertTownRestrictionsToHash()
 
     for _, town_restriction in pairs(Config.TownRestrictions) do
         if not town_restriction.allowed then
-            local town_hash = GetHashKey(town_restriction.name)
+            local town_hash = joaat(town_restriction.name)
             ClientData.RestrictedTowns[town_hash] = town_restriction.name
         end
     end
@@ -161,7 +161,7 @@ function Anim(actor, dict, body, duration, flags, introtiming, exittiming)
 end
 
 function LoadModel(model)
-    local model = GetHashKey(model)
+    local model = joaat(model)
     RequestModel(model)
 
     while not HasModelLoaded(model) do RequestModel(model)
@@ -183,7 +183,7 @@ function OnHatchetEquip(toolhash)
 
     local ped = PlayerPedId()
 
-    SetCurrentPedWeapon(ped, GetHashKey("WEAPON_UNARMED"), true, 0, false, false)
+    SetCurrentPedWeapon(ped, joaat("WEAPON_UNARMED"), true, 0, false, false)
 
     ClientData.HatchetTool = CreateObject(toolhash, GetOffsetFromEntityInWorldCoords(ped,0.0,0.0,0.0), true, true, true)
     AttachEntityToEntity(ClientData.HatchetTool, ped, GetPedBoneIndex(ped, 7966), 0.0,0.0,0.0,  0.0,0.0,0.0, 0, 0, 0, 0, 2, 1, 0, 0);
