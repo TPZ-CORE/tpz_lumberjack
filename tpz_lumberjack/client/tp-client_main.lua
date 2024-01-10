@@ -165,7 +165,7 @@ Citizen.CreateThread(function()
                             ClientData.ChoppedTrees[treeCoords] = true
                             ClientData.IsBusy = true
         
-                            SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true, 0, false, false)
+                            SetCurrentPedWeapon(player, joaat("WEAPON_UNARMED"), true, 0, false, false)
         
                             Citizen.Wait(500)
         
