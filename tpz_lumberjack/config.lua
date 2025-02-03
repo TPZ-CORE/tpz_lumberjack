@@ -1,43 +1,60 @@
 Config = {}
 
 Config.DevMode   = false
-
 Config.ActionKey = 0x760A9C6F --[G]
 
 -----------------------------------------------------------
---[[ Discord Webhooking  ]]--
+--[[ Webhooking (Only DevTools - Injection Cheat Logs) ]]--
 -----------------------------------------------------------
 
 Config.Webhooking = { 
-    Enable = true, 
-    Url = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", -- The discord webhook url.
-    Color = 10038562,
+    Enabled = false, 
+    Url     = "", -- The discord webhook url.
+    Color   = 10038562,
 }
-
------------------------------------------------------------
---[[ TPZ-LEVELING  ]]--
------------------------------------------------------------
-
-Config.tpz_leveling = true
 
 -----------------------------------------------------------
 --[[ General ]]--
 -----------------------------------------------------------
 
-Config.Job                          = "lumberjack"
-Config.OnlyJob                      = false -- If set to true, only the players with the Config.Job will be able to work on the mining areas.
+-- Set to false if you don't use tpz_leveling resource.
+Config.tpz_leveling                 = true
+
+Config.Jobs                         = { "lumberjack" } -- set to false if you want to disable jobs based.
 
 Config.HatchetItem                  = "hatchet"
-Config.DurabilityRemove             = {0, 1} -- Set to false if you don't want to remove any durability. (100% is maximum)
+Config.ObjectModel                  = 'p_axe02x'
+
+-- Set to false if you don't want the hatchet durability to removed.
+Config.Durability                   = { Enabled = true, RemoveValue = { min = 0, max = 1 } }
 
 Config.ChoppingTimer                = 10 -- Time in seconds.
-Config.ChopAgain                    = 60 -- Time in minutes (Time before you can chop again in the same tree location). Set to false if you don't want them to chop again until the next restart.
+
+-- (!) Set to false if you don't want them to chop again the same tree until the next restart.
+Config.ChopAgain                    = 30 -- Time in minutes (Time before you can chop again in the same tree location).
 
 Config.ActionDistance               = 1.1
 
 Config.DisplayActionMarkers         = true
 Config.DisplayActionMarkersDistance = 10.0
 Config.DisplayActionMarkersRGBA     = {r = 240, g = 230, b = 140, a = 255}
+
+-----------------------------------------------------------
+--[[ Rewards ]]--
+-----------------------------------------------------------
+
+-- (!) The default reward item to receive always.
+-- @param exp : is the experience to receive if tpz_leveling is enabled based on the lumberjacks.
+Config.DefaultReward = {Enabled = true, Item = "wooden_sticks", Label = "Wooden Sticks", Quantity = { min = 1, max = 2 }, Experience = 2 }
+
+-- Extra random rewards! Set to {} or false if you don't want any extra random rewards.
+Config.RandomRewards = {
+    { Item = "wood", Label = "Wooden Log", Chance = 50, Quantity = { min = 1, max = 2 }, Experience = 10 },
+}
+
+-----------------------------------------------------------
+--[[ Town Restrictions ]]--
+-----------------------------------------------------------
 
 Config.TownRestrictions = {
     { name = 'Annesburg',  allowed = false },
@@ -50,35 +67,6 @@ Config.TownRestrictions = {
     { name = 'Tumbleweed', allowed = false },
     { name = 'Valentine',  allowed = false },
     { name = 'Vanhorn',    allowed = false },
-}
-
-Config.KeyControls = { -- IF PLAYER HAVE THE HATCHET EQUIPED, HE CANNOT USE THE CONTROLS BELOW.
-    Disable = true,
-
-    Controls = {
-        [1] = 0x07CE1E61, -- MOUSE1
-        [2] = 0xF84FA74F, -- MOUSE2
-        [3] = 0xAC4BD4F1, -- TAB
-        [4] = 0xCEFD9220, -- MOUNT
-        [5] = 0x4CC0E2FE, -- B
-        [6] = 0x8CC9CD42, -- X
-        [7] = 0x26E9DC00, -- Z
-        [8] = 0xDB096B85, -- CTRL       
-    },
-
-    InventoryControl = 0xC1989F95, -- The following control is disabled only while player is chopping to prevent bugs.
-}
-
------------------------------------------------------------
---[[ Rewards ]]--
------------------------------------------------------------
-
--- @param exp : is the experience which will it give for tpz_leveling (lumberjack type).
-
-Config.DefaultReward   = {enabled = true, name = "wooden_sticks", label = "Wooden Sticks", quantity = { 1, 2 }, exp = 2 }
-
-Config.RandomRewards = {
-  {name = "wood",          label = "Wooden Log",    chance = 50,   quantity = {1,2},  exp = 10},
 }
 
 -----------------------------------------------------------
