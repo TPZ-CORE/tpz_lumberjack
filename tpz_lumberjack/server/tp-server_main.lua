@@ -162,13 +162,14 @@ AddEventHandler("tpz_lumberjack:server:onChoppingSuccessReward", function(treeLo
 
 		local randomQuantity = math.random(DefaultRewardConfig.Quantity.min, DefaultRewardConfig.Quantity.max)
 		local canCarryItem   = TPZInv.canCarryItem(_source, DefaultRewardConfig.Item, randomQuantity)
-	
+
 		if Config.tpz_leveling then
 
 			local LevelingAPI = exports.tpz_leveling:getAPI()
 			LevelingAPI.AddPlayerLevelExperience(_source, 'lumberjack', DefaultRewardConfig.Experience)
 		end
 
+		Wait(500)
 		if canCarryItem then
 	
 			TPZInv.addItem(_source, DefaultRewardConfig.Item, randomQuantity, nil)
@@ -198,7 +199,8 @@ AddEventHandler("tpz_lumberjack:server:onChoppingSuccessReward", function(treeLo
 		end
 	
 		local canCarryItem = TPZInv.canCarryItem(_source, RewardItem.Item, randomQuantity)
-	
+
+		Wait(500)
 		if canCarryItem then
 	
 			TPZInv.addItem(_source, RewardItem.Item, randomQuantity, nil)
