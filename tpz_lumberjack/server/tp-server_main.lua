@@ -3,163 +3,222 @@ local TPZInv = exports.tpz_inventory:getInventoryAPI()
 
 TriggerEvent("getTPZCore", function(cb) TPZ = cb end)
 
-
 local ChoppedTrees = {}
 
+-----------------------------------------------------------
+--[[ Local Functions ]]--
+-----------------------------------------------------------
+
+-- @GetTableLength returns the length of a table.
+local function GetTableLength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
+end
+
+local function NearestValue(table, number)
+    local smallestSoFar, smallestIndex
+    for i, y in ipairs(table) do
+        if not smallestSoFar or (math.abs(number-y.Chance) < smallestSoFar) then
+            smallestSoFar = math.abs(number-y.Chance)
+            smallestIndex = i
+        end
+    end
+    return smallestIndex, table[smallestIndex]
+end
+
+local function GetRandomReward()
+
+	local rewardList  = {}
+	local rewardAdded = false
+
+	if GetTableLength(Config.RandomRewards) > 0 then
+		
+		for k,v in pairs(Config.RandomRewards) do 
+		
+			math.randomseed(os.time()) -- required to refresh the random.math for better results. 
+			local chance = math.random(1, 100)
+	
+			if v.Chance >= chance then
+				table.insert(rewardList, v)
+				rewardAdded = true
+			end
+	
+		end
+
+	end
+
+	if rewardAdded then
+		math.randomseed(os.time()) -- required to refresh the random.math for better results. 
+
+		local chance = math.random(1, 100)
+		local index, value = NearestValue(rewardList, chance)
+		return (value)
+
+	else
+		return ({Item = "nothing"})
+	end
+
+end
+
+local function GetPlayerData(source)
+	local _source = source
+    local xPlayer = TPZ.GetPlayer(_source)
+
+	return {
+        steamName      = GetPlayerName(_source),
+        username       = xPlayer.getFirstName() .. ' ' .. xPlayer.getLastName(),
+		identifier     = xPlayer.getIdentifier(),
+        charIdentifier = xPlayer.getCharacterIdentifier(),
+		job            = xPlayer.getJob(),
+	}
+
+end
+
+local function HasRequiredJob(currentJob)
+
+	if not Config.Jobs or Config.Jobs and GetTableLength(Config.Jobs) <= 0 then
+		return true
+	end
+
+	for _, job in pairs (Config.Jobs) do
+
+		if job == currentJob then
+			return true
+		end
+		
+	end
+
+	return false
+
+end
+
+-----------------------------------------------------------
+--[[ Functions ]]--
+-----------------------------------------------------------
+
+function GetChoppedTreeList()
+	return ChoppedTrees
+end
+
+-----------------------------------------------------------
+--[[ Base Events  ]]--
+-----------------------------------------------------------
+ 
+AddEventHandler('onResourceStop', function(resourceName)
+    if (GetCurrentResourceName() ~= resourceName) then
+        return
+    end
+      
+    ChoppedTrees = nil -- clearing all data
+end)
 
 -----------------------------------------------------------
 --[[ Events ]]--
 -----------------------------------------------------------
 
-RegisterServerEvent("tpz_lumberjack:requestChoppedTrees")
-AddEventHandler("tpz_lumberjack:requestChoppedTrees", function()
-	local _source         = source
-	local xPlayer         = TPZ.GetPlayer(_source)
-    local charidentifier  = xPlayer.getCharacterIdentifier()
+RegisterServerEvent("tpz_lumberjack:server:onChoppingSuccessReward")
+AddEventHandler("tpz_lumberjack:server:onChoppingSuccessReward", function(treeLocation, targetItemId)
+	local _source        = source
+	local PlayerData     = GetPlayerData(_source)
 
-	if ChoppedTrees[charidentifier] then
+	local hasRequiredJob = HasRequiredJob(PlayerData.job) -- in case its job based, we also check if player has the correct job when receiving rewards.
+	local charIdentifier = PlayerData.charIdentifier -- used frequently
 
-		local newList  = {}
-		local finished = false
-		
-		-- If char exists, we replace the source when requesting chopped trees (reconnected).
-		ChoppedTrees[charidentifier].source = _source
+	if ChoppedTrees[charIdentifier] == nil then
+		ChoppedTrees[charIdentifier] = {}
+	end
 
-		local tableLength = GetTableLength(ChoppedTrees[charidentifier].list)
+	if ChoppedTrees[charIdentifier][treeLocation] or not hasRequiredJob then
 
-		if tableLength > 0 then
+        if Config.Webhooking.Enabled then
+            local _w, _c      = Config.Webhooking.Url, Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Color
+            local description = 'The specified user attempted to use devtools / injection or netbug cheat on lumberjack reward.'
+            TPZ.SendToDiscordWithPlayerParameters(_w, Locales['DEVTOOLS_INJECTION_DETECTED_TITLE_LOG'], _source, PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, description, _c)
+        end
 
-			for index, tree in pairs (ChoppedTrees[charidentifier].list) do
-				newList[tree.location] = true
+        ListedPlayers[_source] = nil
+        xPlayer.disconnect(Locales['DEVTOOLS_INJECTION_DETECTED'])
+		return
+	end
+
+	ChoppedTrees[charIdentifier][treeLocation] = {}
+	ChoppedTrees[charIdentifier][treeLocation].cooldown = Config.ChopAgain
+
+	math.randomseed(os.time()) -- required to refresh the random.math for better results. 
+
+	-- Removing durability if enabled on action.
+	if Config.Durability.Enabled and targetItemId then
+		local randomValueRemove = math.random(Config.Durability.RemoveValue.min, Config.Durability.RemoveValue.max)
+        TPZInv.removeItemDurability(_source, Config.HatchetItem, randomValueRemove, targetItemId, false)
+    end
+
+	local foundText      = ""
+	local cannotCarryAny = false -- required to check for default reward if received / not
+
+	if Config.DefaultReward.Enabled then
+
+		local DefaultRewardConfig = Config.DefaultReward
+
+		local randomQuantity = math.random(DefaultRewardConfig.Quantity.min, DefaultRewardConfig.Quantity.max)
+		local canCarryItem   = TPZInv.canCarryItem(_source, DefaultRewardConfig.Item, randomQuantity)
 	
-				if next(ChoppedTrees[charidentifier].list, index) == nil then
-					finished = true
-				end
-			end
-	
-			while not finished do
-				Wait(250)
-			end
-	
-			TriggerClientEvent("tpz_lumberjack:receiveChoppedTrees", _source, newList)
+		if Config.tpz_leveling then
 
+			local LevelingAPI = exports.tpz_leveling:getAPI()
+			LevelingAPI.AddPlayerLevelExperience(_source, 'lumberjack', DefaultRewardConfig.Experience)
 		end
-	end
-end)
 
-RegisterServerEvent("tpz_lumberjack:onChoppingSuccessReward")
-AddEventHandler("tpz_lumberjack:onChoppingSuccessReward", function(treeLocation)
-	local _source         = source
-	local xPlayer         = TPZ.GetPlayer(_source)
-
-    local identifier      = xPlayer.getIdentifier()
-    local charidentifier  = xPlayer.getCharacterIdentifier()
-    local steamName       = GetPlayerName(_source)
-
-    local webhookData     = Config.Webhooking
-    local message         = "**Steam name: **`" .. steamName .. "`**\nIdentifier: **`" .. identifier .. " (Char: " .. charidentifier .. ") `"
-
-	local foundText       = ""
-
-	if ChoppedTrees[charidentifier] == nil then
-
-		ChoppedTrees[charidentifier]        = {}
-
-		ChoppedTrees[charidentifier].source = _source
-		ChoppedTrees[charidentifier].list   = {}
-
-		Wait(150)
-	end
-
-	ChoppedTrees[charidentifier].list[treeLocation]          = {}
-	ChoppedTrees[charidentifier].list[treeLocation].location = treeLocation
-	ChoppedTrees[charidentifier].list[treeLocation].cb       = true
-	ChoppedTrees[charidentifier].list[treeLocation].cooldown = Config.ChopAgain
-
-	-- Default Reward.
-
-	if Config.DefaultReward.enabled then
-		local defaultReward = Config.DefaultReward
-
-		local quantity  = math.random(defaultReward.quantity[1], defaultReward.quantity[2])
-
-		local canCarryItem = TPZInv.canCarryItem(_source, defaultReward.name, quantity)
-	
-		Wait(500)
-	
 		if canCarryItem then
 	
-			TPZInv.addItem(_source, defaultReward.name, quantity, nil)
-			foundText = "X" .. quantity .. " " .. defaultReward.label
-	
+			TPZInv.addItem(_source, DefaultRewardConfig.Item, randomQuantity, nil)
+			foundText = "X" .. randomQuantity .. " " .. DefaultRewardConfig.Label
 		else
+
+			cannotCarryAny = true
 			SendNotification(_source, Locales['CANNOT_CARRY'], "error")
 		end
 
+	else
+		cannotCarryAny = true
 	end
 
-	-- Random Rewards
-	local reward = GetRandomReward()
+	-- Generate Random Reward (if available)
+	local RewardItem = GetRandomReward()
 
-	if reward.name ~= "nothing" then
+	if RewardItem.Item ~= "nothing" then
 
-		local rquantity  = math.random(reward.quantity[1], reward.quantity[2])
+		math.randomseed(os.time()) -- required to refresh the random.math for better results. 
+
+		local randomQuantity = math.random(RewardItem.Quantity.min, RewardItem.Quantity.max)
 
 		if Config.tpz_leveling then
-			TriggerEvent("tpz_leveling:AddLevelExperience", _source, "lumberjack", tonumber(reward.exp))
+			local LevelingAPI = exports.tpz_leveling:getAPI()
+			LevelingAPI.AddPlayerLevelExperience(_source, 'lumberjack', RewardItem.Experience)
 		end
 	
-		local canCarryItem = TPZInv.canCarryItem(_source, reward.name, rquantity)
-	
-		Wait(500)
+		local canCarryItem = TPZInv.canCarryItem(_source, RewardItem.Item, randomQuantity)
 	
 		if canCarryItem then
 	
-			TPZInv.addItem(_source, reward.name, rquantity, nil)
-			foundText = foundText .. " & X" ..  rquantity .. " " .. reward.label
+			TPZInv.addItem(_source, RewardItem.Item, randomQuantity, nil)
+
+			if cannotCarryAny then
+				foundText = "X" ..  randomQuantity .. " " .. RewardItem.Label
+			else
+				foundText = foundText .. " & X" ..  randomQuantity .. " " .. RewardItem.Label
+			end
+
+			cannotCarryAny = false
 		else
 			SendNotification(_source, Locales['CANNOT_CARRY'], "error")
 		end
 
 	end
 
-	SendNotification(_source, string.format(Locales['SUCCESSFULLY_FOUND'] .. foundText), "success")
-	
-	if webhookData.Enable then
-		local title = "🌳` The following player found " .. foundText .. ".`"
-		TriggerEvent("tpz_core:sendToDiscord", webhookData.Url, title, message, webhookData.Color)
+	if not cannotCarryAny then
+		SendNotification(_source, string.format(Locales['SUCCESSFULLY_FOUND_REWARDS'], foundText), "success")
 	end
-
-end)
-
--- The following event is triggered to update the current pickaxe durability in client side for updating properly.
-RegisterServerEvent("tpz_lumberjack:requestDurability")
-AddEventHandler("tpz_lumberjack:requestDurability", function(itemId)
-	local _source           = source
-
-    local currentDurability = TPZInv.getItemDurability(_source, Config.HatchetItem, itemId)
-    TriggerClientEvent('tpz_lumberjack:updateDurability', _source, currentDurability)
-end)
-
--- The following event is triggered on every action in order to remove the requested durability.
-RegisterServerEvent("tpz_lumberjack:removeDurability")
-AddEventHandler("tpz_lumberjack:removeDurability", function(itemId)
-	local _source           = source
-
-    local currentDurability = TPZInv.getItemDurability(_source, Config.HatchetItem, itemId)
-
-    if currentDurability <= 0 then
-        return
-    end
-
-	local randomDurability = math.random(Config.DurabilityRemove[1], Config.DurabilityRemove[2])
-
-	TPZInv.removeItemDurability(_source, Config.HatchetItem, randomDurability, itemId, false)
-
-    -- We check if the amount we removed goes to 0, to remove the pickaxe from the player hands after finishing.
-    if (currentDurability - randomDurability) <= 0 then
-        TriggerClientEvent('tpz_lumberjack:onHatchetItemUse', _source, 0, 100)
-    end
 
 end)
 
@@ -167,31 +226,26 @@ end)
 --[[ Threads ]]--
 -----------------------------------------------------------
 
-if Config.ChopAgain then
+if Config.ChopAgain ~= false then
 
 	Citizen.CreateThread(function ()
+
 		while true do
+
 			Wait(60000)
 
-			local tableLength = GetTableLength(ChoppedTrees)
-
-			if tableLength > 0 then
+			if GetTableLength(ChoppedTrees) > 0 then
 				
-				for _, choppedList in pairs (ChoppedTrees) do
-					
-					for _, tree in pairs (choppedList.list) do
+				for charIdentifier, table in pairs (ChoppedTrees) do
+
+					for index, tree in pairs (table) do
 
 						tree.cooldown = tree.cooldown - 1
 
 						if tree.cooldown <= 0 then
-							tree.cooldown = 0
+							tree.coodown = 0
 
-							choppedList.list[tree.location] = nil
-
-							if GetPlayerName(choppedList.source) then
-								TriggerClientEvent("tpz_lumberjack:getRemovedChoppedTree", choppedList.source, tree.location)
-							end
-
+							ChoppedTrees[charIdentifier][index] = nil
 						end
 
 					end
@@ -201,60 +255,7 @@ if Config.ChopAgain then
 			end
 
 		end
+
 	end)
 
-end
------------------------------------------------------------
---[[ Functions ]]--
------------------------------------------------------------
-
--- @GetTableLength returns the length of a table.
-function GetTableLength(T)
-    local count = 0
-    for _ in pairs(T) do count = count + 1 end
-    return count
-end
-
-function GetRandomReward()
-	local rewards  = {}
-    local chance   =  math.random(1, 100)
-	local finished = false
-	local added    = false
-
-	for k,v in pairs(Config.RandomRewards) do 
-		
-		if v.chance >= chance then
-			table.insert(rewards, v)
-			added = true
-		end
-
-		if next(Config.RandomRewards, k) == nil then
-			finished = true
-		end
-	end
-
-	while not finished do
-		Wait(10)
-	end
-
-	if added then
-		chance   =  math.random(1, 100)
-		local index, value = NearestValue(rewards, chance)
-		return (value)
-	else
-
-		return ({name = "nothing"})
-	end
-
-end
-
-function NearestValue(table, number)
-    local smallestSoFar, smallestIndex
-    for i, y in ipairs(table) do
-        if not smallestSoFar or (math.abs(number-y.chance) < smallestSoFar) then
-            smallestSoFar = math.abs(number-y.chance)
-            smallestIndex = i
-        end
-    end
-    return smallestIndex, table[smallestIndex]
 end
