@@ -1,20 +1,53 @@
 
 
-ClientData = {
+local PlayerData = {
     IsHoldingHatchet = false,
-    HatchetTool      = nil,
+    ObjectEntity     = nil,
 
     IsBusy           = false,
     
-    ItemId           = 0,
-    Durability       = 100,
-
+    ItemId           = nil,
     Job              = "unemployed",
-
-    ChoppedTrees     = {},
 
     RestrictedTowns  = {},
 }
+
+-----------------------------------------------------------
+--[[ Functions ]]--
+-----------------------------------------------------------
+
+function GetPlayerData()
+    return PlayerData
+end
+
+-----------------------------------------------------------
+--[[ Local Functions ]]--
+-----------------------------------------------------------
+
+-- @GetTableLength returns the length of a table.
+local function GetTableLength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
+end
+
+local function HasRequiredJob(currentJob)
+
+	if not Config.Jobs or Config.Jobs and GetTableLength(Config.Jobs) <= 0 then
+		return true
+	end
+
+	for _, job in pairs (Config.Jobs) do
+
+		if job == currentJob then
+			return true
+		end
+		
+	end
+
+	return false
+
+end
 
 -----------------------------------------------------------
 --[[ Base Events ]]--
@@ -25,112 +58,101 @@ AddEventHandler('onResourceStop', function(resourceName)
         return
     end
 
-    if ClientData.IsHoldingHatchet then
+    if PlayerData.IsHoldingHatchet then
 
         ClearPedTasks(PlayerPedId())
-        Citizen.InvokeNative(0xED00D72F81CF7278, ClientData.HatchetTool, 1, 1)
-        DeleteObject(ClientData.HatchetTool)
+
+        Citizen.InvokeNative(0xED00D72F81CF7278, PlayerData.ObjectEntity, 1, 1) -- DetachCarriableEntity
+
+        RemoveEntityProperly(PlayerData.ObjectEntity, joaat(Config.ObjectModel) )
         Citizen.InvokeNative(0x58F7DB5BD8FA2288, PlayerPedId()) -- Cancel Walk Style
 
-        ClientData.IsHoldingHatchet = false
-
-        ClearPedTasks(PlayerPedId())
+        PlayerData.IsHoldingHatchet = false
     end
 
 end)
+
+-----------------------------------------------------------
+--[[ General Events ]]--
+-----------------------------------------------------------
 
 -- Gets the player job when devmode set to false and character is selected.
 AddEventHandler("tpz_core:isPlayerReady", function()
 
     TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_core:getPlayerData", function(data)
-        ClientData.Job = data.job
+
+        if data == nil then
+            return
+        end
+
+        PlayerData.Job = data.job
     end)
 
-    TriggerServerEvent("tpz_lumberjack:requestChoppedTrees")
-    
 end)
 
 -- Updates the player job.
 RegisterNetEvent("tpz_core:getPlayerJob")
 AddEventHandler("tpz_core:getPlayerJob", function(data)
-    ClientData.Job = data.job
+    PlayerData.Job = data.job
 end)
 
 -- Gets the player job when devmode set to true.
 if Config.DevMode then
+
     Citizen.CreateThread(function ()
 
         Wait(2000)
 
         TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_core:getPlayerData", function(data)
-            ClientData.Job = data.job
+
+            if data == nil then
+                return
+            end
+
+            PlayerData.Job = data.job
+
         end)
 
     end)
+
 end
-
--- The following event is triggered only for receiveing all the chopped trees data when someone tried to relog.
-RegisterNetEvent("tpz_lumberjack:receiveChoppedTrees")
-AddEventHandler("tpz_lumberjack:receiveChoppedTrees", function(data)
-    ClientData.ChoppedTrees = data
-end)
-
--- Update a chopped tree for removing
-RegisterNetEvent("tpz_lumberjack:getRemovedChoppedTree")
-AddEventHandler("tpz_lumberjack:getRemovedChoppedTree", function(treeLocation)
-
-    print("removed")
-    ClientData.ChoppedTrees[treeLocation] = nil
-end)
-
 
 -----------------------------------------------------------
 --[[ Events ]]--
 -----------------------------------------------------------
 
 -- When following event is triggered, if the player is not holding any pickaxe, we attach it, otherwise we detach the pickaxe.
-RegisterNetEvent("tpz_lumberjack:onHatchetItemUse")
-AddEventHandler("tpz_lumberjack:onHatchetItemUse", function(itemId, durability)
-    local playerPed    = PlayerPedId()
+RegisterNetEvent("tpz_lumberjack:client:onHatchetItemUse")
+AddEventHandler("tpz_lumberjack:client:onHatchetItemUse", function(itemId)
+    local playerPed = PlayerPedId()
 
-    if not ClientData.IsHoldingHatchet then
+    if not PlayerData.IsHoldingHatchet then
 
-        ClientData.IsHoldingHatchet = true
+        PlayerData.IsHoldingHatchet = true
 
-        OnHatchetEquip('p_axe02x')
+        OnHatchetEquip()
 
-        ClientData.ItemId     = itemId
-        ClientData.Durability = durability
-
+        PlayerData.ItemId = itemId
     else
 
         ClearPedTasks(playerPed)
-        Citizen.InvokeNative(0xED00D72F81CF7278, ClientData.HatchetTool, 1, 1)
-        DeleteObject(ClientData.HatchetTool)
+        Citizen.InvokeNative(0xED00D72F81CF7278, PlayerData.ObjectEntity, 1, 1)
+        DeleteObject(PlayerData.ObjectEntity)
         Citizen.InvokeNative(0x58F7DB5BD8FA2288, playerPed) -- Cancel Walk Style
 
-        ClientData.IsHoldingHatchet = false
+        PlayerData.IsHoldingHatchet = false
     end
-end)
-
--- The following event is triggered to update the current durability during changes (actions).
-RegisterNetEvent('tpz_lumberjack:updateDurability')
-AddEventHandler('tpz_lumberjack:updateDurability', function(cb)
-    ClientData.Durability = cb
 end)
 
 ---------------------------------------------------------------
 -- Threads
 ---------------------------------------------------------------
 
-
--- check job
--- add tree to server
 Citizen.CreateThread(function()
-    RegisterPrompts()
+    RegisterPromptAction()
 
-    ClientData.AllowedTrees    = ConvertTreesToHash()
-    ClientData.RestrictedTowns = ConvertTownRestrictionsToHash()
+    PlayerData.AllowedTrees    = ConvertTreesToHash()
+    PlayerData.RestrictedTowns = ConvertTownRestrictionsToHash()
 
     while true do
         Citizen.Wait(0)
@@ -138,108 +160,128 @@ Citizen.CreateThread(function()
         local sleep        = true
 
         local player       = PlayerPedId()
-        local coords       = GetEntityCoords(player)
         local isPlayerDead = IsEntityDead(player)
 
-        if not isPlayerDead and ClientData.IsHoldingHatchet and not ClientData.IsBusy then
+        if not isPlayerDead and PlayerData.IsHoldingHatchet and not PlayerData.IsBusy then
 
-            if (Config.OnlyJob and ClientData.Job == Config.Job) or (not Config.OnlyJob) then
-
-                local canDoAction        = CanPlayerDoAction(player)
-                local isInRestrictedTown = IsInRestrictedTown(coords)
-    
-                if not isInRestrictedTown and canDoAction then
-    
-                    local nearbyTree = GetUnChoppedNearbyTree(ClientData.AllowedTrees, coords)
-    
-                    if nearbyTree and not IsTreeAlreadyChopped(nearbyTree.vector_coords) then
-                        sleep = false
-    
-                        local label = CreateVarString(10, 'LITERAL_STRING', Locales['HATCHET_NAME'] .. " | " .. ClientData.Durability .. "%")
-                        PromptSetActiveGroupThisFrame(Prompt, label)
-        
-                        if Citizen.InvokeNative(0xC92AC953F0A982AE, PromptList) then
-    
-                            local treeCoords = CoordsToString(nearbyTree.vector_coords)
-    
-                            ClientData.ChoppedTrees[treeCoords] = true
-                            ClientData.IsBusy = true
-        
-                            SetCurrentPedWeapon(player, joaat("WEAPON_UNARMED"), true, 0, false, false)
-        
-                            Citizen.Wait(500)
-        
-                            local isChopping = true
-                                    
-                            Citizen.CreateThread(function() 
-                                while isChopping do 
-                                    Wait(0) 
-                                    Anim(player,"amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans", "pre_swing_trans_after_swing", -1,0)
-    
-                                    Wait(2000)
-                                end
-                            end)
-        
-                            Citizen.Wait(1000 * Config.ChoppingTimer)
+            local canDoAction        = CanPlayerDoAction()
             
-                            TriggerServerEvent("tpz_lumberjack:onChoppingSuccessReward", treeCoords)
-                                    
-                            ClearPedTasks(player)
+            local coords             = GetEntityCoords(player)
+            local isInRestrictedTown = IsInRestrictedTown(coords)
+
+            if not isInRestrictedTown and canDoAction then
+
+                local nearbyTree = GetTreeNearby(coords, 1.4, PlayerData.AllowedTrees)
+
+                if nearbyTree then
+
+                    sleep = false
+
+                    local promptGroup, promptList = GetPromptData()
+
+                    local label = CreateVarString(10, 'LITERAL_STRING', Locales['HATCHET_NAME'] )
+                    PromptSetActiveGroupThisFrame(promptGroup, label)
+
+                    if PromptHasHoldModeCompleted(promptList) then
+
+                        local treeCoords = CoordsToString(nearbyTree.vector_coords)
+
+                        TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_lumberjack:callbacks:canChopTreeLocation", function(isPermitted)
+
+                            if isPermitted then
+
+                                local getRequiredJob = HasRequiredJob(PlayerData.Job)
+
+                                if getRequiredJob then
+
+                                    PlayerData.IsBusy = true
+                
+                                    SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true, 0, false, false)
+                
+                                    Citizen.Wait(500)
+                
+                                    local isChopping = true
+                                            
+                                    Citizen.CreateThread(function() 
+                                        while isChopping do 
+                                            Wait(0) 
+                                            Anim(player,"amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans", "pre_swing_trans_after_swing", -1,0)
+            
+                                            Wait(2000)
+                                        end
+                                    end)
+                
+                                    Citizen.Wait(1000 * Config.ChoppingTimer)
                     
-                            if Config.DurabilityRemove then
-    
-                                TriggerServerEvent("tpz_lumberjack:removeDurability", ClientData.ItemId)
-                    
-                                Wait(500)
-                                TriggerServerEvent("tpz_lumberjack:requestDurability", ClientData.ItemId)
-                    
+                                    TriggerServerEvent("tpz_lumberjack:server:onChoppingSuccessReward", treeCoords, PlayerData.ItemId)
+                                            
+                                    ClearPedTasks(player)
+                                    RemoveAnimDict("amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans") -- must remove the dict of animation
+                            
+                                    isChopping = false
+                                    PlayerData.IsBusy = false
+
+                                else
+                                    SendNotification(nil, Locales['NOT_REQUIRED_JOB'], "error")
+                                end
+
+                            else
+                                SendNotification(nil, Locales['ALREADY_CHOPPED'], "error")
                             end
-    
-                            isChopping = false
-                            ClientData.IsBusy = false
-        
-                        end
-    
+
+                        end, { location = treeCoords })
+
+                        Wait(1000)
+
                     end
 
                 end
 
             end
+
         end
 
         -- In case the player dies, we detach the shovel and all current data.
-        if ClientData.IsHoldingHatchet and isPlayerDead then
-            TriggerEvent('tpz_lumberjack:onHatchetItemUse')
+        if PlayerData.IsHoldingHatchet and isPlayerDead then
+
+            --TriggerEvent('tpz_lumberjack:onHatchetItemUse')
         end
 
         if sleep then
-            Citizen.Wait(1000)
+            Wait(1000)
         end
 
     end
 end)
 
 -- The following thread is disabling control actions while player has a hatchet attached.
-if Config.KeyControls.Disable then
 
-    Citizen.CreateThread(function()
-        while true do
-            Wait(0)
+Citizen.CreateThread(function()
+    while true do
+        Wait(0)
 
-            if ClientData.IsHoldingHatchet then
-
-                for index, control in pairs (Config.KeyControls.Controls) do
-                    DisableControlAction(0, control)
-                end
-
-                if ClientData.IsBusy then
-                    DisableControlAction(0, Config.KeyControls.InventoryControl)
-                end
-
-            else
-                Wait(1000)
-            end
+        if PlayerData.IsBusy then
+            TriggerEvent('tpz_inventory:closePlayerInventory')
         end
-    end)
 
-end
+        if PlayerData.IsHoldingHatchet then
+        
+            DisableControlAction(0, 0xCC1075A7, true) -- MWUP
+            DisableControlAction(0, 0xDB096B85, true) -- MWDOWN
+
+            DisableControlAction(0, 0x07CE1E61) -- MOUSE1
+            DisableControlAction(0, 0xF84FA74F) -- MOUSE2
+            DisableControlAction(0, 0xAC4BD4F1) -- TAB
+            DisableControlAction(0, 0xCEFD9220) -- MOUNT
+            DisableControlAction(0, 0x4CC0E2FE) -- B
+            DisableControlAction(0, 0x8CC9CD42) -- X
+            DisableControlAction(0, 0x26E9DC00) -- Z
+            DisableControlAction(0, 0xDB096B85) -- CTRL       
+
+        else
+            Wait(1000)
+        end
+
+    end
+
+end)
