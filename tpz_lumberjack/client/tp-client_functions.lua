@@ -1,24 +1,47 @@
-Prompt     = GetRandomIntInRange(0, 0xffffff)
-PromptList = nil
+local Prompts     = GetRandomIntInRange(0, 0xffffff)
+local PromptList = nil
 
 -----------------------------------------------------------
 --[[ Prompts ]]--
 -----------------------------------------------------------
 
-RegisterPrompts = function()
+RegisterPromptAction = function()
     local str = Locales['HATCHET']
 
-    PromptList = PromptRegisterBegin()
-    PromptSetControlAction(PromptList, Config.ActionKey)
+    local dPrompt = PromptRegisterBegin()
+
+    PromptSetControlAction(dPrompt, Config.ActionKey)
     str = CreateVarString(10, 'LITERAL_STRING', str)
-    PromptSetText(PromptList, str)
-    PromptSetEnabled(PromptList, 1)
-    PromptSetVisible(PromptList, 1)
-    PromptSetStandardMode(PromptList, 1)
-    PromptSetGroup(PromptList, Prompt)
-    Citizen.InvokeNative(0xC5F428EE08FA7F2C, PromptList, true)
-    PromptRegisterEnd(PromptList)
+    PromptSetText(dPrompt, str)
+    PromptSetEnabled(dPrompt, 1)
+    PromptSetVisible(dPrompt, 1)
+    PromptSetStandardMode(dPrompt, 1)
+    PromptSetHoldMode(dPrompt, 1000)
+    PromptSetGroup(dPrompt, Prompts)
+    Citizen.InvokeNative(0xC5F428EE08FA7F2C, dPrompt, true)
+    PromptRegisterEnd(dPrompt)
+
+    PromptList = dPrompt
 end
+
+function GetPromptData()
+    return Prompts, PromptList
+end
+
+-----------------------------------------------------------
+--[[ Base Events ]]--
+-----------------------------------------------------------
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if (GetCurrentResourceName() ~= resourceName) then
+        return
+    end
+
+    Citizen.InvokeNative(0x00EDE88D4D13CF59, Prompts) -- UiPromptDelete
+
+    Prompts = nil
+    PromptsList = nil
+end)
 
 -----------------------------------------------------------
 --[[ Converts ]]--
@@ -28,7 +51,7 @@ function ConvertTreesToHash()
     local model_hashes = {}
 
     for _, model_name in pairs(Trees.List) do
-        local model_hash = joaat(model_name)
+        local model_hash = GetHashKey(model_name)
         model_hashes[model_hash] = model_name
     end
 
@@ -37,17 +60,20 @@ end
 
 function ConvertTownRestrictionsToHash()
 
+    local PlayerData = GetPlayerData()
+
     for _, town_restriction in pairs(Config.TownRestrictions) do
         if not town_restriction.allowed then
-            local town_hash = joaat(town_restriction.name)
-            ClientData.RestrictedTowns[town_hash] = town_restriction.name
+            local town_hash = GetHashKey(town_restriction.name)
+            PlayerData.RestrictedTowns[town_hash] = town_restriction.name
         end
     end
 
-    return ClientData.RestrictedTowns
+    return PlayerData.RestrictedTowns
 end
 
 function IsInRestrictedTown(coords)
+    local PlayerData = GetPlayerData()
 
     local x, y, z = table.unpack(coords)
     local town_hash = GetTown(x, y, z)
@@ -56,7 +82,7 @@ function IsInRestrictedTown(coords)
         return false
     end
 
-    if ClientData.RestrictedTowns[town_hash] then
+    if PlayerData.RestrictedTowns[town_hash] then
         return true
     end
 
@@ -103,26 +129,6 @@ function GetTreeNearby(coords, radius, hash_filter)
     return found_entity
 end
 
-function IsTreeAlreadyChopped(coords)
-    local convertedCoords = CoordsToString(coords)
-    return ClientData.ChoppedTrees[convertedCoords]
-end
-
-function GetUnChoppedNearbyTree(allowedModels, coords)
-
-    local found = GetTreeNearby(coords, 1.4, allowedModels)
-
-    if not found then
-        return nil
-    end
-
-    if IsTreeAlreadyChopped(found.vector_coords) then
-        return nil
-    end
-
-    return found
-end
-
 function CoordsToString(coords)
     return round(coords[1], 1) .. '-' .. round(coords[2], 1) .. '-' .. round(coords[3], 1)
 end
@@ -141,7 +147,7 @@ end
 --[[ General ]]--
 -----------------------------------------------------------
 
-function Anim(actor, dict, body, duration, flags, introtiming, exittiming)
+Anim = function(actor, dict, body, duration, flags, introtiming, exittiming)
     Citizen.CreateThread(function()
         RequestAnimDict(dict)
         local dur = duration or -1
@@ -160,41 +166,56 @@ function Anim(actor, dict, body, duration, flags, introtiming, exittiming)
     end)
 end
 
-function LoadModel(model)
-    local model = joaat(model)
-    RequestModel(model)
 
+LoadModel = function(inputModel)
+    local model = joaat(inputModel)
+ 
+    RequestModel(model)
+ 
     while not HasModelLoaded(model) do RequestModel(model)
         Citizen.Wait(10)
     end
+ end
+
+RemoveEntityProperly = function(entity, objectHash)
+    DeleteEntity(entity)
+    DeletePed(entity)
+    SetEntityAsNoLongerNeeded( entity )
+
+    if objectHash then
+        SetModelAsNoLongerNeeded(objectHash)
+    end
 end
 
-function OnHatchetEquip(toolhash)
+OnHatchetEquip = function()
+    local PlayerData = GetPlayerData()
 
     Citizen.InvokeNative(0x6A2F820452017EA2) -- Clear Prompts from Screen
+    SetCurrentPedWeapon(ped, joaat("WEAPON_UNARMED"), true, 0, false, false)
 
-    if ClientData.HatchetTool then
-        DeleteEntity(ClientData.HatchetTool)
+    if PlayerData.ObjectEntity then
+        RemoveEntityProperly(PlayerData.ObjectEntity, joaat(Config.ObjectModel) )
     end
 
-    LoadModel(toolhash)
-
-    Wait(500)
+    LoadModel(Config.ObjectModel)
 
     local ped = PlayerPedId()
 
-    SetCurrentPedWeapon(ped, joaat("WEAPON_UNARMED"), true, 0, false, false)
+    PlayerData.ObjectEntity = CreateObject(joaat(Config.ObjectModel), GetOffsetFromEntityInWorldCoords(ped,0.0,0.0,0.0), true, true, true)
 
-    ClientData.HatchetTool = CreateObject(toolhash, GetOffsetFromEntityInWorldCoords(ped,0.0,0.0,0.0), true, true, true)
-    AttachEntityToEntity(ClientData.HatchetTool, ped, GetPedBoneIndex(ped, 7966), 0.0,0.0,0.0,  0.0,0.0,0.0, 0, 0, 0, 0, 2, 1, 0, 0);
+    AttachEntityToEntity(PlayerData.ObjectEntity, ped, GetPedBoneIndex(ped, 7966), 0.0,0.0,0.0,  0.0,0.0,0.0, 0, 0, 0, 0, 2, 1, 0, 0);
+
     Citizen.InvokeNative(0x923583741DC87BCE, ped, 'arthur_healthy')
     Citizen.InvokeNative(0x89F5E7ADECCCB49C, ped, "carry_pitchfork")
     Citizen.InvokeNative(0x2208438012482A1A, ped, true, true)
-    ForceEntityAiAndAnimationUpdate(ClientData.HatchetTool, 1)
+    ForceEntityAiAndAnimationUpdate(PlayerData.ObjectEntity, 1)
     Citizen.InvokeNative(0x3A50753042B6891B, ped, "PITCH_FORKS")
 end
 
-function CanPlayerDoAction(player)
+CanPlayerDoAction = function()
+
+    local player = PlayerPedId()
+
     if IsPedOnMount(player) or IsPedInAnyVehicle(player) or IsPedDeadOrDying(player) or IsEntityInWater(player) or IsPedClimbing(player) or not IsPedOnFoot(player) then
         return false
     end
