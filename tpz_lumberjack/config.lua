@@ -7,10 +7,14 @@ Config.ActionKey = 0x760A9C6F --[G]
 --[[ Webhooking (Only DevTools - Injection Cheat Logs) ]]--
 -----------------------------------------------------------
 
-Config.Webhooking = { 
-    Enabled = false, 
-    Url     = "", -- The discord webhook url.
-    Color   = 10038562,
+Config.Webhooks = {
+    
+    ['DEVTOOLS_INJECTION_CHEAT'] = { -- Warnings and Logs about players who used or atleast tried to use devtools injection.
+        Enabled = false, 
+        Url = "", 
+        Color = 10038562,
+    },
+
 }
 
 -----------------------------------------------------------
