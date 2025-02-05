@@ -131,8 +131,8 @@ AddEventHandler("tpz_lumberjack:server:onChoppingSuccessReward", function(treeLo
 
 	if ChoppedTrees[charIdentifier][treeLocation] or not hasRequiredJob then
 
-        if Config.Webhooking.Enabled then
-            local _w, _c      = Config.Webhooking.Url, Config.Webhooking.Color
+        if Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Enabled then
+            local _w, _c      = Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Url, Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Color
             local description = 'The specified user attempted to use devtools / injection or netbug cheat on lumberjack reward.'
             TPZ.SendToDiscordWithPlayerParameters(_w, Locales['DEVTOOLS_INJECTION_DETECTED_TITLE_LOG'], _source, PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, description, _c)
         end
