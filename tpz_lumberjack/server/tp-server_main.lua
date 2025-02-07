@@ -117,8 +117,8 @@ end)
 --[[ Events ]]--
 -----------------------------------------------------------
 
-RegisterServerEvent("tpz_lumberjack:server:onChoppingSuccessReward")
-AddEventHandler("tpz_lumberjack:server:onChoppingSuccessReward", function(treeLocation, targetItemId)
+RegisterServerEvent("tpz_lumberjack:server:success")
+AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetItemId)
 	local _source        = source
 	local PlayerData     = GetPlayerData(_source)
 
