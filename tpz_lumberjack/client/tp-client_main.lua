@@ -117,10 +117,6 @@ if Config.DevMode then
 
 end
 
------------------------------------------------------------
---[[ Events ]]--
------------------------------------------------------------
-
 -- When following event is triggered, if the player is not holding any pickaxe, we attach it, otherwise we detach the pickaxe.
 RegisterNetEvent("tpz_lumberjack:client:onHatchetItemUse")
 AddEventHandler("tpz_lumberjack:client:onHatchetItemUse", function(itemId)
