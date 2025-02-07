@@ -96,27 +96,6 @@ AddEventHandler("tpz_core:getPlayerJob", function(data)
     PlayerData.Job = data.job
 end)
 
--- Gets the player job when devmode set to true.
-if Config.DevMode then
-
-    Citizen.CreateThread(function ()
-
-        Wait(2000)
-
-        TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_core:getPlayerData", function(data)
-
-            if data == nil then
-                return
-            end
-
-            PlayerData.Job = data.job
-
-        end)
-
-    end)
-
-end
-
 -- When following event is triggered, if the player is not holding any pickaxe, we attach it, otherwise we detach the pickaxe.
 RegisterNetEvent("tpz_lumberjack:client:onHatchetItemUse")
 AddEventHandler("tpz_lumberjack:client:onHatchetItemUse", function(itemId)
@@ -143,6 +122,27 @@ end)
 ---------------------------------------------------------------
 -- Threads
 ---------------------------------------------------------------
+
+-- Gets the player job when devmode set to true.
+if Config.DevMode then
+
+    Citizen.CreateThread(function ()
+
+        Wait(2000)
+
+        TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_core:getPlayerData", function(data)
+
+            if data == nil then
+                return
+            end
+
+            PlayerData.Job = data.job
+
+        end)
+
+    end)
+
+end
 
 Citizen.CreateThread(function()
     RegisterPromptAction()
