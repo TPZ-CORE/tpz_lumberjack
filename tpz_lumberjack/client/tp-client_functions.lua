@@ -189,7 +189,8 @@ end
 
 OnHatchetEquip = function()
     local PlayerData = GetPlayerData()
-
+    local ped        = PlayerPedId()
+    
     Citizen.InvokeNative(0x6A2F820452017EA2) -- Clear Prompts from Screen
     SetCurrentPedWeapon(ped, joaat("WEAPON_UNARMED"), true, 0, false, false)
 
@@ -198,8 +199,6 @@ OnHatchetEquip = function()
     end
 
     LoadModel(Config.ObjectModel)
-
-    local ped = PlayerPedId()
 
     PlayerData.ObjectEntity = CreateObject(joaat(Config.ObjectModel), GetOffsetFromEntityInWorldCoords(ped,0.0,0.0,0.0), true, true, true)
 
