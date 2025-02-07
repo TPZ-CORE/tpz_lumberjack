@@ -239,8 +239,14 @@ Citizen.CreateThread(function()
 
         -- In case the player dies, we detach the shovel and all current data.
         if PlayerData.IsHoldingHatchet and isPlayerDead then
-
-            --TriggerEvent('tpz_lumberjack:onHatchetItemUse')
+				
+            ClearPedTasks(player)
+            Citizen.InvokeNative(0xED00D72F81CF7278, PlayerData.ObjectEntity, 1, 1)
+            DeleteObject(PlayerData.ObjectEntity)
+            Citizen.InvokeNative(0x58F7DB5BD8FA2288, player) -- Cancel Walk Style
+    
+            PlayerData.IsHoldingHatchet = false
+				
         end
 
         if sleep then
