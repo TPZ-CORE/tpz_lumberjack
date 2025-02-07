@@ -209,7 +209,7 @@ Citizen.CreateThread(function()
                 
                                     Citizen.Wait(1000 * Config.ChoppingTimer)
                     
-                                    TriggerServerEvent("tpz_lumberjack:server:onChoppingSuccessReward", treeCoords, PlayerData.ItemId)
+                                    TriggerServerEvent("tpz_lumberjack:server:success", treeCoords, PlayerData.ItemId)
                                             
                                     ClearPedTasks(player)
                                     RemoveAnimDict("amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans") -- must remove the dict of animation
