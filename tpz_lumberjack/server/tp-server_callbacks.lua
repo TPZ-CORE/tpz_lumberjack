@@ -1,12 +1,10 @@
-local TPZ = {}
-
-TriggerEvent("getTPZCore", function(cb) TPZ = cb end)
+local TPZ = exports.tpz_core:getCoreAPI()
 
 -----------------------------------------------------------
 --[[ Callbacks  ]]--
 -----------------------------------------------------------
 
-exports.tpz_core:server().addNewCallBack("tpz_lumberjack:callbacks:canChopTreeLocation", function(source, cb, data)
+exports.tpz_core:getCoreAPI().addNewCallBack("tpz_lumberjack:callbacks:canChopTreeLocation", function(source, cb, data)
     local _source        = source
 	local xPlayer        = TPZ.GetPlayer(_source)
 
