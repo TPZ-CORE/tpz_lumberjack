@@ -1,7 +1,5 @@
-local TPZ    = {}
+local TPZ    = exports.tpz_core:getCoreAPI()
 local TPZInv = exports.tpz_inventory:getInventoryAPI()
-
-TriggerEvent("getTPZCore", function(cb) TPZ = cb end)
 
 local ChoppedTrees = {}
 
