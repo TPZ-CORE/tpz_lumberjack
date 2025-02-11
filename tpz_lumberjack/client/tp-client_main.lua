@@ -78,15 +78,15 @@ end)
 
 -- Gets the player job when devmode set to false and character is selected.
 AddEventHandler("tpz_core:isPlayerReady", function()
+    Wait(2000)
+    
+    local data = exports.tpz_core:client().getPlayerClientData()
 
-    TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_core:getPlayerData", function(data)
+    if data == nil then
+        return
+    end
 
-        if data == nil then
-            return
-        end
-
-        PlayerData.Job = data.job
-    end)
+    PlayerData.Job = data.job
 
 end)
 
@@ -127,19 +127,17 @@ end)
 if Config.DevMode then
 
     Citizen.CreateThread(function ()
-
+        
         Wait(2000)
 
-        TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_core:getPlayerData", function(data)
+        local data = exports.tpz_core:client().getPlayerClientData()
 
-            if data == nil then
-                return
-            end
-
-            PlayerData.Job = data.job
-
-        end)
-
+        if data == nil then
+            return
+        end
+    
+        PlayerData.Job = data.job
+    
     end)
 
 end
