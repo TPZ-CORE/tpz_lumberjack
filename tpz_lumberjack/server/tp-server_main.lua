@@ -1,6 +1,4 @@
-local TPZ    = exports.tpz_core:getCoreAPI()
-local TPZInv = exports.tpz_inventory:getInventoryAPI()
-
+local TPZ = exports.tpz_core:getCoreAPI()
 local ChoppedTrees = {}
 
 -----------------------------------------------------------
@@ -119,6 +117,7 @@ RegisterServerEvent("tpz_lumberjack:server:success")
 AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetItemId)
 	local _source        = source
 	local PlayerData     = GetPlayerData(_source)
+    local xPlayer        = TPZ.GetPlayer(_source)
 
 	local hasRequiredJob = HasRequiredJob(PlayerData.job) -- in case its job based, we also check if player has the correct job when receiving rewards.
 	local charIdentifier = PlayerData.charIdentifier -- used frequently
@@ -148,7 +147,7 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 	-- Removing durability if enabled on action.
 	if Config.Durability.Enabled and targetItemId then
 		local randomValueRemove = math.random(Config.Durability.RemoveValue.min, Config.Durability.RemoveValue.max)
-        TPZInv.removeItemDurability(_source, Config.HatchetItem, randomValueRemove, targetItemId, false)
+        xPlayer.removeItemDurability(Config.HatchetItem, randomValueRemove, targetItemId, false)
     end
 
 	local foundText      = ""
@@ -159,7 +158,7 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 		local DefaultRewardConfig = Config.DefaultReward
 
 		local randomQuantity = math.random(DefaultRewardConfig.Quantity.min, DefaultRewardConfig.Quantity.max)
-		local canCarryItem   = TPZInv.canCarryItem(_source, DefaultRewardConfig.Item, randomQuantity)
+		local canCarryItem   = xPlayer.canCarryItem(DefaultRewardConfig.Item, randomQuantity)
 
 		if Config.tpz_leveling then
 
@@ -169,8 +168,9 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 
 		Wait(500)
 		if canCarryItem then
-	
-			TPZInv.addItem(_source, DefaultRewardConfig.Item, randomQuantity, nil)
+
+			xPlayer.addItem(DefaultRewardConfig.Item, randomQuantity, nil)
+
 			foundText = "X" .. randomQuantity .. " " .. DefaultRewardConfig.Label
 		else
 
@@ -196,12 +196,12 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 			LevelingAPI.AddPlayerLevelExperience(_source, 'lumberjack', RewardItem.Experience)
 		end
 	
-		local canCarryItem = TPZInv.canCarryItem(_source, RewardItem.Item, randomQuantity)
+		local canCarryItem = xPlayer.canCarryItem(RewardItem.Item, randomQuantity)
 
 		Wait(500)
 		if canCarryItem then
 	
-			TPZInv.addItem(_source, RewardItem.Item, randomQuantity, nil)
+			xPlayer.addItem(RewardItem.Item, randomQuantity, nil)
 
 			if cannotCarryAny then
 				foundText = "X" ..  randomQuantity .. " " .. RewardItem.Label
