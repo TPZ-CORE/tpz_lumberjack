@@ -80,7 +80,7 @@ end)
 AddEventHandler("tpz_core:isPlayerReady", function()
     Wait(2000)
     
-    local data = exports.tpz_core:client().getPlayerClientData()
+    local data = exports.tpz_core:getCoreAPI().getPlayerClientData()
 
     if data == nil then
         return
@@ -130,7 +130,7 @@ if Config.DevMode then
         
         Wait(2000)
 
-        local data = exports.tpz_core:client().getPlayerClientData()
+        local data = exports.tpz_core:getCoreAPI().getPlayerClientData()
 
         if data == nil then
             return
