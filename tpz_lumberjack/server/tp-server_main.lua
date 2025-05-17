@@ -1,5 +1,5 @@
 local TPZ = exports.tpz_core:getCoreAPI()
-local ListedPlayers = {}
+local ChoppedTrees = {}
 
 -----------------------------------------------------------
 --[[ Local Functions ]]--
@@ -15,27 +15,27 @@ end
 local function NearestValue(table, number)
     local smallestSoFar, smallestIndex
     for i, y in ipairs(table) do
-        if not smallestSoFar or (math.abs(number-y.chance) < smallestSoFar) then
-            smallestSoFar = math.abs(number-y.chance)
+        if not smallestSoFar or (math.abs(number-y.Chance) < smallestSoFar) then
+            smallestSoFar = math.abs(number-y.Chance)
             smallestIndex = i
         end
     end
     return smallestIndex, table[smallestIndex]
 end
 
-local function GetRandomReward(inputLocation)
+local function GetRandomReward()
 
 	local rewardList  = {}
 	local rewardAdded = false
 
-	if GetTableLength(Config.Items[inputLocation]) > 0 then
+	if GetTableLength(Config.RandomRewards) > 0 then
 		
-		for k,v in pairs(Config.Items[inputLocation]) do 
+		for k,v in pairs(Config.RandomRewards) do 
 		
 			math.randomseed(os.time()) -- required to refresh the random.math for better results. 
 			local chance = math.random(1, 100)
 	
-			if v.chance >= chance then
+			if v.Chance >= chance then
 				table.insert(rewardList, v)
 				rewardAdded = true
 			end
@@ -90,6 +90,14 @@ local function HasRequiredJob(currentJob)
 end
 
 -----------------------------------------------------------
+--[[ Functions ]]--
+-----------------------------------------------------------
+
+function GetChoppedTreeList()
+	return ChoppedTrees
+end
+
+-----------------------------------------------------------
 --[[ Base Events  ]]--
 -----------------------------------------------------------
  
@@ -98,76 +106,156 @@ AddEventHandler('onResourceStop', function(resourceName)
         return
     end
       
-    ListedPlayers = nil -- clearing all data
+    ChoppedTrees = nil -- clearing all data
 end)
 
 -----------------------------------------------------------
 --[[ Events ]]--
 -----------------------------------------------------------
 
-RegisterServerEvent("tpz_mining:server:success")
-AddEventHandler("tpz_mining:server:success", function(targetMiningLocation, targetItemId)
-	local _source    = source
-	local PlayerData = GetPlayerData(_source)
-	local xPlayer    = TPZ.GetPlayer(_source)
+RegisterServerEvent("tpz_lumberjack:server:success")
+AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetItemId)
+	local _source        = source
+	local PlayerData     = GetPlayerData(_source)
+    local xPlayer        = TPZ.GetPlayer(_source)
 
-	math.randomseed(os.time())
-	
-	Wait( math.random(100, 250) )
+	local hasRequiredJob = HasRequiredJob(PlayerData.job) -- in case its job based, we also check if player has the correct job when receiving rewards.
+	local charIdentifier = PlayerData.charIdentifier -- used frequently
 
-	if (targetMiningLocation == nil) or (targetMiningLocation and Config.Items[targetMiningLocation] == nil) or (not hasRequiredJob) or (ListedPlayers[_source]) then
+	if ChoppedTrees[charIdentifier] == nil then
+		ChoppedTrees[charIdentifier] = {}
+	end
+
+	if ChoppedTrees[charIdentifier][treeLocation] or not hasRequiredJob then
 
         if Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Enabled then
             local _w, _c      = Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Url, Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Color
-            local description = 'The specified user attempted to use devtools / injection or netbug cheat on mining reward.'
+            local description = 'The specified user attempted to use devtools / injection or netbug cheat on lumberjack reward.'
             TPZ.SendToDiscordWithPlayerParameters(_w, Locales['DEVTOOLS_INJECTION_DETECTED_TITLE_LOG'], _source, PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, description, _c)
         end
 
-		ListedPlayers[_source] = nil
+        ListedPlayers[_source] = nil
         xPlayer.disconnect(Locales['DEVTOOLS_INJECTION_DETECTED'])
-
 		return
 	end
 
-	ListedPlayers[_source] = true
+	ChoppedTrees[charIdentifier][treeLocation] = {}
+	ChoppedTrees[charIdentifier][treeLocation].cooldown = Config.ChopAgain
+
+	math.randomseed(os.time()) -- required to refresh the random.math for better results. 
 
 	-- Removing durability if enabled on action.
 	if Config.Durability.Enabled and targetItemId then
 		local randomValueRemove = math.random(Config.Durability.RemoveValue.min, Config.Durability.RemoveValue.max)
-		xPlayer.removeItemDurability(Config.PickaxeItem, randomValueRemove, targetItemId, false)
-	end
+        xPlayer.removeItemDurability(Config.HatchetItem, randomValueRemove, targetItemId, false)
+    end
 
-	local RewardItem = GetRandomReward(targetMiningLocation)
+	local foundText      = ""
+	local cannotCarryAny = false -- required to check for default reward if received / not
 
-	if RewardItem.Item ~= "nothing" then
+	if Config.DefaultReward.Enabled then
 
-		math.randomseed(os.time()) -- required to refresh the random.math for better results. 
-		local randomQuantity = math.random(RewardItem.quantity.min, RewardItem.quantity.max)
+		local DefaultRewardConfig = Config.DefaultReward
+
+		local randomQuantity = math.random(DefaultRewardConfig.Quantity.min, DefaultRewardConfig.Quantity.max)
+		local canCarryItem   = xPlayer.canCarryItem(DefaultRewardConfig.Item, randomQuantity)
 
 		if Config.tpz_leveling then
 
 			local LevelingAPI = exports.tpz_leveling:getAPI()
-			LevelingAPI.AddPlayerLevelExperience(_source, 'mining', RewardItem.experience )
+			LevelingAPI.AddPlayerLevelExperience(_source, 'lumberjack', DefaultRewardConfig.Experience)
 		end
-
-		local canCarryItem = xPlayer.canCarryItem(RewardItem.item, randomQuantity)
 
 		Wait(500)
 		if canCarryItem then
 
-			xPlayer.addItem(RewardItem.item, randomQuantity, nil)
+			xPlayer.addItem(DefaultRewardConfig.Item, randomQuantity, nil)
 
-			SendNotification(_source, string.format(Locales['SUCCESSFULLY_FOUND_REWARD'], randomQuantity, RewardItem.label), "success")
-			
+			foundText = "X" .. randomQuantity .. " " .. DefaultRewardConfig.Label
 		else
+
+			cannotCarryAny = true
 			SendNotification(_source, Locales['CANNOT_CARRY'], "error")
 		end
 
 	else
-		SendNotification(_source, Locales['FOUND_NOTHING'], "error")
+		cannotCarryAny = true
 	end
 
-	Wait(3000)
-	ListedPlayers[_source] = nil
+	-- Generate Random Reward (if available)
+	local RewardItem = GetRandomReward()
+
+	if RewardItem.Item ~= "nothing" then
+
+		math.randomseed(os.time()) -- required to refresh the random.math for better results. 
+
+		local randomQuantity = math.random(RewardItem.Quantity.min, RewardItem.Quantity.max)
+
+		if Config.tpz_leveling then
+			local LevelingAPI = exports.tpz_leveling:getAPI()
+			LevelingAPI.AddPlayerLevelExperience(_source, 'lumberjack', RewardItem.Experience)
+		end
+	
+		local canCarryItem = xPlayer.canCarryItem(RewardItem.Item, randomQuantity)
+
+		Wait(500)
+		if canCarryItem then
+	
+			xPlayer.addItem(RewardItem.Item, randomQuantity, nil)
+
+			if cannotCarryAny then
+				foundText = "X" ..  randomQuantity .. " " .. RewardItem.Label
+			else
+				foundText = foundText .. " & X" ..  randomQuantity .. " " .. RewardItem.Label
+			end
+
+			cannotCarryAny = false
+		else
+			SendNotification(_source, Locales['CANNOT_CARRY'], "error")
+		end
+
+	end
+
+	if not cannotCarryAny then
+		SendNotification(_source, string.format(Locales['SUCCESSFULLY_FOUND_REWARDS'], foundText), "success")
+	end
 
 end)
+
+-----------------------------------------------------------
+--[[ Threads ]]--
+-----------------------------------------------------------
+
+if Config.ChopAgain ~= false then
+
+	Citizen.CreateThread(function ()
+
+		while true do
+
+			Wait(60000)
+
+			if GetTableLength(ChoppedTrees) > 0 then
+				
+				for charIdentifier, table in pairs (ChoppedTrees) do
+
+					for index, tree in pairs (table) do
+
+						tree.cooldown = tree.cooldown - 1
+
+						if tree.cooldown <= 0 then
+							tree.coodown = 0
+
+							ChoppedTrees[charIdentifier][index] = nil
+						end
+
+					end
+
+				end
+
+			end
+
+		end
+
+	end)
+
+end
