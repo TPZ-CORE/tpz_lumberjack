@@ -32,7 +32,6 @@ local function GetRandomReward()
 		
 		for k,v in pairs(Config.RandomRewards) do 
 		
-			math.randomseed(os.time()) -- required to refresh the random.math for better results. 
 			local chance = math.random(1, 100)
 	
 			if v.Chance >= chance then
@@ -45,7 +44,6 @@ local function GetRandomReward()
 	end
 
 	if rewardAdded then
-		math.randomseed(os.time()) -- required to refresh the random.math for better results. 
 
 		local chance = math.random(1, 100)
 		local index, value = NearestValue(rewardList, chance)
@@ -143,8 +141,6 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 	ChoppedTrees[charIdentifier][treeLocation] = {}
 	ChoppedTrees[charIdentifier][treeLocation].cooldown = Config.ChopAgain
 
-	math.randomseed(os.time()) -- required to refresh the random.math for better results. 
-
 	-- Removing durability if enabled on action.
 	if Config.Durability.Enabled and targetItemId then
 		local randomValueRemove = math.random(Config.Durability.RemoveValue.min, Config.Durability.RemoveValue.max)
@@ -187,8 +183,6 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 	local RewardItem = GetRandomReward()
 
 	if RewardItem.Item ~= "nothing" then
-
-		math.randomseed(os.time()) -- required to refresh the random.math for better results. 
 
 		local randomQuantity = math.random(RewardItem.Quantity.min, RewardItem.Quantity.max)
 
