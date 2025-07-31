@@ -5,13 +5,6 @@ local ChoppedTrees = {}
 --[[ Local Functions ]]--
 -----------------------------------------------------------
 
--- @GetTableLength returns the length of a table.
-local function GetTableLength(T)
-    local count = 0
-    for _ in pairs(T) do count = count + 1 end
-    return count
-end
-
 local function NearestValue(table, number)
     local smallestSoFar, smallestIndex
     for i, y in ipairs(table) do
@@ -28,7 +21,7 @@ local function GetRandomReward()
 	local rewardList  = {}
 	local rewardAdded = false
 
-	if GetTableLength(Config.RandomRewards) > 0 then
+	if TPZ.GetTableLength(Config.RandomRewards) > 0 then
 		
 		for k,v in pairs(Config.RandomRewards) do 
 		
@@ -71,7 +64,7 @@ end
 
 local function HasRequiredJob(currentJob)
 
-	if not Config.Jobs or Config.Jobs and GetTableLength(Config.Jobs) <= 0 then
+	if not Config.Jobs or Config.Jobs and TPZ.GetTableLength(Config.Jobs) <= 0 then
 		return true
 	end
 
@@ -229,7 +222,7 @@ if Config.ChopAgain ~= false then
 
 			Wait(60000)
 
-			if GetTableLength(ChoppedTrees) > 0 then
+			if TPZ.GetTableLength(ChoppedTrees) > 0 then
 				
 				for charIdentifier, table in pairs (ChoppedTrees) do
 
