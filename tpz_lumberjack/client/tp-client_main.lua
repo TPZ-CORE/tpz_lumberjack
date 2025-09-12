@@ -156,7 +156,7 @@ Citizen.CreateThread(function()
         local player       = PlayerPedId()
         local isPlayerDead = IsEntityDead(player)
 
-        if PlayerData.IsHoldingHatchet and not PlayerData.IsBusy and not PlayerData.IsBusy then
+        if PlayerData.IsHoldingHatchet and not PlayerData.IsBusy and not isPlayerDead then
 
             local canDoAction        = CanPlayerDoAction()
             local coords             = GetEntityCoords(player)
