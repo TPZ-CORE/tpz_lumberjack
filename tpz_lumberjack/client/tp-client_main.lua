@@ -151,7 +151,6 @@ Citizen.CreateThread(function()
     PlayerData.RestrictedTowns = ConvertTownRestrictionsToHash()
 
     while true do
-        Citizen.Wait(0)
 
         local sleep        = 1000
         local player       = PlayerPedId()
@@ -283,3 +282,4 @@ AddEventHandler('tpz_lumberjack:client:start_thread', function()
     end
 
 end)
+
