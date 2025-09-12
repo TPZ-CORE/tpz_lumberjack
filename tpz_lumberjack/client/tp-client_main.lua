@@ -108,6 +108,8 @@ AddEventHandler("tpz_lumberjack:client:onHatchetItemUse", function(itemId)
         OnHatchetEquip()
 
         PlayerData.ItemId = itemId
+
+        TriggerEvent('tpz_lumberjack:client:start_thread')
     else
 
         ClearPedTasks(playerPed)
@@ -151,83 +153,85 @@ Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
 
-        local sleep        = true
-
+        local sleep        = 1000
         local player       = PlayerPedId()
         local isPlayerDead = IsEntityDead(player)
 
-        if not isPlayerDead and PlayerData.IsHoldingHatchet and not PlayerData.IsBusy then
+        if isPlayerDead or not PlayerData.IsHoldingHatchet or PlayerData.IsBusy then
+            Wait(1000)
+            goto END
+        end
 
-            local canDoAction        = CanPlayerDoAction()
+        local canDoAction        = CanPlayerDoAction()
             
-            local coords             = GetEntityCoords(player)
-            local isInRestrictedTown = IsInRestrictedTown(coords)
+        local coords             = GetEntityCoords(player)
+        local isInRestrictedTown = IsInRestrictedTown(coords)
 
-            if not isInRestrictedTown and canDoAction then
+        if not isInRestrictedTown and canDoAction then
 
-                local nearbyTree = GetTreeNearby(coords, 1.4, PlayerData.AllowedTrees)
+            local nearbyTree = GetTreeNearby(coords, 1.4, PlayerData.AllowedTrees)
 
-                if nearbyTree then
+            if nearbyTree then
 
-                    sleep = false
+                sleep = 0
 
-                    local promptGroup, promptList = GetPromptData()
+                local promptGroup, promptList = GetPromptData()
 
-                    local label = CreateVarString(10, 'LITERAL_STRING', Locales['HATCHET_NAME'] )
-                    PromptSetActiveGroupThisFrame(promptGroup, label)
+                local label = CreateVarString(10, 'LITERAL_STRING', Locales['HATCHET_NAME'] )
+                PromptSetActiveGroupThisFrame(promptGroup, label)
 
-                    if PromptHasHoldModeCompleted(promptList) then
+                if PromptHasHoldModeCompleted(promptList) then
 
-                        local treeCoords = CoordsToString(nearbyTree.vector_coords)
+                    local treeCoords = CoordsToString(nearbyTree.vector_coords)
 
-                        TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_lumberjack:callbacks:canChopTreeLocation", function(isPermitted)
+                    TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_lumberjack:callbacks:canChopTreeLocation", function(isPermitted)
 
-                            if isPermitted then
+                        if isPermitted then
 
-                                local getRequiredJob = HasRequiredJob(PlayerData.Job)
+                            local getRequiredJob = HasRequiredJob(PlayerData.Job)
 
-                                if getRequiredJob then
+                            if getRequiredJob then
 
-                                    PlayerData.IsBusy = true
-                
-                                    SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true, 0, false, false)
-                
-                                    Citizen.Wait(500)
-                
-                                    local isChopping = true
-                                            
-                                    Citizen.CreateThread(function() 
-                                        while isChopping do 
-                                            Wait(0) 
-                                            Anim(player,"amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans", "pre_swing_trans_after_swing", -1,0)
+                                PlayerData.IsBusy = true
             
-                                            Wait(2000)
-                                        end
-                                    end)
+                                SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true, 0, false, false)
+            
+                                Citizen.Wait(500)
+            
+                                local isChopping = true
+                                        
+                                Citizen.CreateThread(function() 
+                                    while isChopping do 
+                                        Wait(0) 
+                                        Anim(player,"amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans", "pre_swing_trans_after_swing", -1,0)
+        
+                                        Wait(2000)
+                                    end
+                                end)
+            
+                                Citizen.Wait(1000 * Config.ChoppingTimer)
                 
-                                    Citizen.Wait(1000 * Config.ChoppingTimer)
-                    
-                                    TriggerServerEvent("tpz_lumberjack:server:success", treeCoords, PlayerData.ItemId)
-                                            
-                                    ClearPedTasks(player)
-                                    RemoveAnimDict("amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans") -- must remove the dict of animation
-                            
-                                    isChopping = false
-                                    PlayerData.IsBusy = false
+                                TriggerServerEvent("tpz_lumberjack:server:success", treeCoords, PlayerData.ItemId)
+                                        
+                                ClearPedTasks(player)
+                                RemoveAnimDict("amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans") -- must remove the dict of animation
+                        
+                                isChopping = false
+                                PlayerData.IsBusy = false
 
-                                else
-                                    SendNotification(nil, Locales['NOT_REQUIRED_JOB'], "error")
-                                end
+                                goto END
 
                             else
-                                SendNotification(nil, Locales['ALREADY_CHOPPED'], "error")
+                                SendNotification(nil, Locales['NOT_REQUIRED_JOB'], "error")
                             end
 
-                        end, { location = treeCoords })
+                        else
+                            SendNotification(nil, Locales['ALREADY_CHOPPED'], "error")
+                        end
 
-                        Wait(1000)
+                    end, { location = treeCoords })
 
-                    end
+                    Wait(1000)
 
                 end
 
@@ -235,9 +239,38 @@ Citizen.CreateThread(function()
 
         end
 
+        ::END::
+        Wait(sleep)
+
+    end
+end)
+
+-- The following thread is disabling control actions while player has a hatchet attached.
+AddEventHandler('tpz_lumberjack:client:start_thread', function()
+    
+    while PlayerData.IsHoldingHatchet do
+        Wait(0)
+
+        DisableControlAction(0, 0xCC1075A7, true) -- MWUP
+        DisableControlAction(0, 0xDB096B85, true) -- MWDOWN
+
+        DisableControlAction(0, 0x07CE1E61) -- MOUSE1
+        DisableControlAction(0, 0xF84FA74F) -- MOUSE2
+        DisableControlAction(0, 0xAC4BD4F1) -- TAB
+        DisableControlAction(0, 0xCEFD9220) -- MOUNT
+        DisableControlAction(0, 0x4CC0E2FE) -- B
+        DisableControlAction(0, 0x8CC9CD42) -- X
+        DisableControlAction(0, 0x26E9DC00) -- Z
+        DisableControlAction(0, 0xDB096B85) -- CTRL       
+
+        if PlayerData.IsBusy then
+            TriggerEvent('tpz_inventory:closePlayerInventory')
+        end
+
         -- In case the player dies, we detach the shovel and all current data.
-        if PlayerData.IsHoldingHatchet and isPlayerDead then
-				
+        if PlayerData.IsHoldingHatchet and IsEntityDead(PlayerPedId()) then
+			local player = PlayerPedId()
+            
             ClearPedTasks(player)
             Citizen.InvokeNative(0xED00D72F81CF7278, PlayerData.ObjectEntity, 1, 1)
             DeleteObject(PlayerData.ObjectEntity)
@@ -245,41 +278,6 @@ Citizen.CreateThread(function()
     
             PlayerData.IsHoldingHatchet = false
 				
-        end
-
-        if sleep then
-            Wait(1000)
-        end
-
-    end
-end)
-
--- The following thread is disabling control actions while player has a hatchet attached.
-
-Citizen.CreateThread(function()
-    while true do
-        Wait(0)
-
-        if PlayerData.IsBusy then
-            TriggerEvent('tpz_inventory:closePlayerInventory')
-        end
-
-        if PlayerData.IsHoldingHatchet then
-        
-            DisableControlAction(0, 0xCC1075A7, true) -- MWUP
-            DisableControlAction(0, 0xDB096B85, true) -- MWDOWN
-
-            DisableControlAction(0, 0x07CE1E61) -- MOUSE1
-            DisableControlAction(0, 0xF84FA74F) -- MOUSE2
-            DisableControlAction(0, 0xAC4BD4F1) -- TAB
-            DisableControlAction(0, 0xCEFD9220) -- MOUNT
-            DisableControlAction(0, 0x4CC0E2FE) -- B
-            DisableControlAction(0, 0x8CC9CD42) -- X
-            DisableControlAction(0, 0x26E9DC00) -- Z
-            DisableControlAction(0, 0xDB096B85) -- CTRL       
-
-        else
-            Wait(1000)
         end
 
     end
