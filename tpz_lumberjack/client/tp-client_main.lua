@@ -156,89 +156,84 @@ Citizen.CreateThread(function()
         local player       = PlayerPedId()
         local isPlayerDead = IsEntityDead(player)
 
-        if isPlayerDead or not PlayerData.IsHoldingHatchet or PlayerData.IsBusy then
-            Wait(1000)
-            goto END
-        end
+        if PlayerData.IsHoldingHatchet and not PlayerData.IsBusy and not PlayerData.IsBusy then
 
-        local canDoAction        = CanPlayerDoAction()
-            
-        local coords             = GetEntityCoords(player)
-        local isInRestrictedTown = IsInRestrictedTown(coords)
-
-        if not isInRestrictedTown and canDoAction then
-
-            local nearbyTree = GetTreeNearby(coords, 1.4, PlayerData.AllowedTrees)
-
-            if nearbyTree then
-
-                sleep = 0
-
-                local promptGroup, promptList = GetPromptData()
-
-                local label = CreateVarString(10, 'LITERAL_STRING', Locales['HATCHET_NAME'] )
-                PromptSetActiveGroupThisFrame(promptGroup, label)
-
-                if PromptHasHoldModeCompleted(promptList) then
-
-                    local treeCoords = CoordsToString(nearbyTree.vector_coords)
-
-                    TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_lumberjack:callbacks:canChopTreeLocation", function(isPermitted)
-
-                        if isPermitted then
-
-                            local getRequiredJob = HasRequiredJob(PlayerData.Job)
-
-                            if getRequiredJob then
-
-                                PlayerData.IsBusy = true
-            
-                                SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true, 0, false, false)
-            
-                                Citizen.Wait(500)
-            
-                                local isChopping = true
-                                        
-                                Citizen.CreateThread(function() 
-                                    while isChopping do 
-                                        Wait(0) 
-                                        Anim(player,"amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans", "pre_swing_trans_after_swing", -1,0)
-        
-                                        Wait(2000)
-                                    end
-                                end)
-            
-                                Citizen.Wait(1000 * Config.ChoppingTimer)
+            local canDoAction        = CanPlayerDoAction()
+            local coords             = GetEntityCoords(player)
+            local isInRestrictedTown = IsInRestrictedTown(coords)
+    
+            if not isInRestrictedTown and canDoAction then
+    
+                local nearbyTree = GetTreeNearby(coords, 1.4, PlayerData.AllowedTrees)
+    
+                if nearbyTree then
+    
+                    sleep = 0
+    
+                    local promptGroup, promptList = GetPromptData()
+    
+                    local label = CreateVarString(10, 'LITERAL_STRING', Locales['HATCHET_NAME'] )
+                    PromptSetActiveGroupThisFrame(promptGroup, label)
+    
+                    if PromptHasHoldModeCompleted(promptList) then
+    
+                        local treeCoords = CoordsToString(nearbyTree.vector_coords)
+    
+                        TriggerEvent("tpz_core:ExecuteServerCallBack", "tpz_lumberjack:callbacks:canChopTreeLocation", function(isPermitted)
+    
+                            if isPermitted then
+    
+                                local getRequiredJob = HasRequiredJob(PlayerData.Job)
+    
+                                if getRequiredJob then
+    
+                                    PlayerData.IsBusy = true
                 
-                                TriggerServerEvent("tpz_lumberjack:server:success", treeCoords, PlayerData.ItemId)
-                                        
-                                ClearPedTasks(player)
-                                RemoveAnimDict("amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans") -- must remove the dict of animation
-                        
-                                isChopping = false
-                                PlayerData.IsBusy = false
-
-                                goto END
-
+                                    SetCurrentPedWeapon(player, GetHashKey("WEAPON_UNARMED"), true, 0, false, false)
+                
+                                    Citizen.Wait(500)
+                
+                                    local isChopping = true
+                                            
+                                    Citizen.CreateThread(function() 
+                                        while isChopping do 
+                                            Wait(0) 
+                                            Anim(player,"amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans", "pre_swing_trans_after_swing", -1,0)
+            
+                                            Wait(2000)
+                                        end
+                                    end)
+                
+                                    Citizen.Wait(1000 * Config.ChoppingTimer)
+                    
+                                    TriggerServerEvent("tpz_lumberjack:server:success", treeCoords, PlayerData.ItemId)
+                                            
+                                    ClearPedTasks(player)
+                                    RemoveAnimDict("amb_work@world_human_tree_chop_new@working@pre_swing@male_a@trans") -- must remove the dict of animation
+                            
+                                    isChopping = false
+                                    PlayerData.IsBusy = false
+                                    
+                                else
+                                    SendNotification(nil, Locales['NOT_REQUIRED_JOB'], "error")
+                                end
+    
                             else
-                                SendNotification(nil, Locales['NOT_REQUIRED_JOB'], "error")
+                                SendNotification(nil, Locales['ALREADY_CHOPPED'], "error")
                             end
-
-                        else
-                            SendNotification(nil, Locales['ALREADY_CHOPPED'], "error")
-                        end
-
-                    end, { location = treeCoords })
-
-                    Wait(1000)
-
+    
+                        end, { location = treeCoords })
+    
+                        Wait(1000)
+    
+                    end
+    
                 end
-
+    
             end
 
         end
 
-        ::END::
         Wait(sleep)
 
     end
@@ -282,4 +277,3 @@ AddEventHandler('tpz_lumberjack:client:start_thread', function()
     end
 
 end)
-
