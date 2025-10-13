@@ -27,7 +27,7 @@ local function GetRandomReward()
 		
 			local chance = math.random(1, 100)
 	
-			if v.Chance >= chance then
+			if chance <= v.Chance then
 				table.insert(rewardList, v)
 				rewardAdded = true
 			end
@@ -91,7 +91,16 @@ end
 -----------------------------------------------------------
 --[[ Base Events  ]]--
 -----------------------------------------------------------
- 
+
+AddEventHandler('onResourceStart', function(resourceName)
+	if (GetCurrentResourceName() ~= resourceName) then
+	  return
+	end
+	
+	math.randomseed(os.time())
+  
+end)
+
 AddEventHandler('onResourceStop', function(resourceName)
     if (GetCurrentResourceName() ~= resourceName) then
         return
@@ -250,3 +259,4 @@ if Config.ChopAgain ~= false then
 	end)
 
 end
+
