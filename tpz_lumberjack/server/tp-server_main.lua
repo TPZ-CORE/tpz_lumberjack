@@ -119,6 +119,10 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 	local PlayerData     = GetPlayerData(_source)
     local xPlayer        = TPZ.GetPlayer(_source)
 
+    if xPlayer.hasLostConnection() then 
+        return 
+    end
+
 	local hasRequiredJob = HasRequiredJob(PlayerData.job) -- in case its job based, we also check if player has the correct job when receiving rewards.
 	local charIdentifier = PlayerData.charIdentifier -- used frequently
 
@@ -259,4 +263,5 @@ if Config.ChopAgain ~= false then
 	end)
 
 end
+
 
