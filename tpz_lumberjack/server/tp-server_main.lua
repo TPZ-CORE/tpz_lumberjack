@@ -133,7 +133,7 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 	if ChoppedTrees[charIdentifier][treeLocation] or not hasRequiredJob then
 
         if Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Enabled then
-            local _w, _c      = Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Url, Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Color
+            local _w, _c      = TPZ.GetWebhookUrl('tpz_lumberjack', 'DEVTOOLS_INJECTION_CHEAT'), Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Color
 
             if string.find(_w, "GetWebhookUrl") then local input = str:match("%((.-)%)") _w = TPZ.GetWebhookUrl(input) end
 
@@ -263,5 +263,6 @@ if Config.ChopAgain ~= false then
 	end)
 
 end
+
 
 
