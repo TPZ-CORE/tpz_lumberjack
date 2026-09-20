@@ -141,7 +141,6 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
             TPZ.SendToDiscordWithPlayerParameters(_w, Locales['DEVTOOLS_INJECTION_DETECTED_TITLE_LOG'], _source, PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, description, _c)
         end
 
-        ListedPlayers[_source] = nil
         --xPlayer.disconnect(Locales['DEVTOOLS_INJECTION_DETECTED'])
         xPlayer.ban(Locales['DEVTOOLS_INJECTION_DETECTED'], -1)
 		return
