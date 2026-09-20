@@ -8,7 +8,7 @@ TPZInv.registerUsableItem(Config.HatchetItem, "tpz_lumberjack", function(data)
 	local _source = data.source
 
 	if Config.Durability.Enabled and data.durability <= 0 then
-		SendNotification(_source, Locales['NOT_DURABILITY'])
+		SendNotification(_source, Locales['NO_DURABILITY'])
 		return
 	end
 
