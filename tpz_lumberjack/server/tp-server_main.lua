@@ -123,6 +123,17 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
         return 
     end
 
+	if Config.Durability.Enabled and targetItemId then -- 1.0.3
+
+		local itemDurability = TPZInv.getItemDurability(_source, Config.HatchetItem, targetItemId)
+
+		if itemDurability <= 0 or itemDurability == nil then 
+			TriggerClientEvent("tpz_lumberjack:client:onHatchetUnEquip", _source)
+			return 
+		end
+
+	end
+
 	local hasRequiredJob = HasRequiredJob(PlayerData.job) -- in case its job based, we also check if player has the correct job when receiving rewards.
 	local charIdentifier = PlayerData.charIdentifier -- used frequently
 
@@ -221,6 +232,16 @@ AddEventHandler("tpz_lumberjack:server:success", function(treeLocation, targetIt
 
 	if not cannotCarryAny then
 		SendNotification(_source, string.format(Locales['SUCCESSFULLY_FOUND_REWARDS'], foundText), "success")
+	end
+
+	if Config.Durability.Enabled and targetItemId then -- 1.0.3
+		local itemDurability = TPZInv.getItemDurability(_source, Config.HatchetItem, targetItemId)
+
+		if itemDurability <= 0 or itemDurability == nil then 
+			TriggerClientEvent("tpz_lumberjack:client:onHatchetUnEquip", _source)
+			return 
+		end
+
 	end
 
 end)
