@@ -1,4 +1,5 @@
 local TPZ = exports.tpz_core:getCoreAPI()
+local TPZInv = exports.tpz_inventory:getInventoryAPI()
 local ChoppedTrees = {}
 
 -----------------------------------------------------------
