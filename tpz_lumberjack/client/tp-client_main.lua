@@ -96,6 +96,24 @@ AddEventHandler("tpz_core:getPlayerJob", function(data)
     PlayerData.Job = data.job
 end)
 
+-- Used on server for preventing players to do actions when hatchet does not have durability
+RegisterNetEvent("tpz_lumberjack:client:onHatchetUnEquip") -- 1.0.3
+AddEventHandler("tpz_lumberjack:client:onHatchetUnEquip", function()
+
+    local playerPed = PlayerPedId()
+
+    if PlayerData.IsHoldingHatchet then
+
+        ClearPedTasks(playerPed)
+        Citizen.InvokeNative(0xED00D72F81CF7278, PlayerData.ObjectEntity, 1, 1)
+        DeleteObject(PlayerData.ObjectEntity)
+        Citizen.InvokeNative(0x58F7DB5BD8FA2288, playerPed) -- Cancel Walk Style
+    
+        PlayerData.IsHoldingHatchet = false
+    end
+
+end)
+
 -- When following event is triggered, if the player is not holding any pickaxe, we attach it, otherwise we detach the pickaxe.
 RegisterNetEvent("tpz_lumberjack:client:onHatchetItemUse")
 AddEventHandler("tpz_lumberjack:client:onHatchetItemUse", function(itemId)
